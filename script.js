@@ -1,14 +1,94 @@
 /* 
+MY API KEY: 340 */
+
+/* 
+Über
+fetch requests
+promises
+classes (und this in classes)
+lesen
+
+Davids Code durchlesen und kommentieren, was ich nicht verstehe, recherchieren
+*/
+
+/* 
 TODOS
-Only add a todo if input field is not empty
+Only add a todo if input field is not empty OK
 Otherwise, adding todos appears to work
 
 NEXT: 
-Remove todo
-Toggle a todo
+Remove todo OK
+Toggle a todo OK
 toggle all
 Filter todos
 Toggle all todos
+Add loading animation that runs after every fetch request
+When there are no todos, hide todo filters. Show text saying there are no todos.
+Add ability to add todo by hitting Enter key
+After adding todo, input field should be empty again
+if all todos are active: toggle-all checkbox must be set to ''. If all todos are completed, set it to 'checked'
+
+--
+
+REMOVE TODO 
+if user clicks remove button:
+  find the id of the todo item that belongs to the button, see URL: https://bobbyhadz.com/blog/react-set-data-attribute
+  send a fetch request to remove that todo item
+  render the todo list again
+
+TOGGLE A SINGLE TODO  
+If user clicks on checkbox:
+  find the id of the todo associated with this checkbox
+  get current state of checkbox:
+    if checkbox is checked:
+      run toggleTodo:
+        send a fetch request, setting todo to active
+    else if checkbox is active:
+      run toggleTodo
+        send a fetch request, setting todo to completed
+    
+  re-render todos
+
+===*** Toggle all does not work yet. Code the strategy below to make it work. ***==================
+TOGGLE ALL TODOS COMPLETED
+---
+What is the task of the toggle-all checkbox?
+  - Show when all todos are completed?
+  - If all todos are completed (-> toggle-all checkbox is checked):
+    - Clicking the checkbox sets all to active
+  - If there is at least one active todo (-> toggle-all checkbox is not checked):
+    - Clicking the checkbox sets all to completed (-> toggle-all checkbox is checked now)
+OR
+  - Set all todos to their opposite state? No, makes no sense
+OR: 
+  - If not all todos are completed:
+    - Set all todos to completed
+  - Else if all todos are completed:
+    - Set all todos to active
+---
+If user clicks on toggle-all checkbox:
+
+// Instead of resetting the completed property of all todos (and sending unnecessary requests)
+
+re-render all todos
+
+
+TOGGLE ALL TODOS
+If user clicks on toggle-all checkbox:
+  // Or: if all todos are completed
+  If checkbox is checked (ie. all todos are completed):
+    For each todo in todos:
+      Send a feetch request, setting it to active
+    Else if checkbox is not checked (ie. at least one todo is active):
+      Filter active todos
+        For each todo in active todos:
+          Send a fetch request, setting it to completed
+
+
+*/
+
+/* QUESTIONS
+Removing a todo seems slow - is this my mistake, or is the API?
 */
 
 function ToDoFilters(props) {
@@ -29,18 +109,19 @@ function ToDoFilters(props) {
 }
 
 function RenderToDos(props) {
-  const {todos} = props;
+  const {todos, onRemove, onToggle} = props;
+  console.log('onToggle: ', onToggle);
 
   return (
     <div className="row rendered-to-dos">
       <div className="col-12">
         { todos.map((todo) => {
             return (
-              <ul className="list-group list-group-horizontal rounded-0 bg-transparent" key={todo.id}>
+              <ul className="list-group list-group-horizontal rounded-0 bg-transparent" key={todo.id} dataid={todo.id}>
                 <li
                   className="list-group-item d-flex align-items-center ps-0 pe-3 py-1 rounded-0 border-0 bg-transparent">
                   <div className="form-check">
-                    <input className="form-check-input me-0" type="checkbox" value="" id="flexCheckChecked1"
+                    <input onChange={onToggle} className="form-check-input me-0" type="checkbox" value="" id="flexCheckChecked1"
                       aria-label="..." checked={todo.completed ? 'checked' : ''}/>
                   </div>
                 </li>
@@ -50,7 +131,7 @@ function RenderToDos(props) {
                   {/* <input className="me-0" type="text" /> */}
                 </li>
                 <li className="list-group-item ps-3 pe-0 py-1 rounded-0 border-0 bg-transparent">
-                  <button className="btn btn-danger">Remove</button>
+                  <button onClick={onRemove} className="btn btn-danger" >Remove</button>
                 </li>
               </ul>
             );
@@ -78,7 +159,7 @@ class ToDoInput extends React.Component {
   }
 
   render() {
-    let {onSubmit} = this.props;
+    let {onSubmit, onToggleAll} = this.props;
 
     console.log('this.state inside ToDoInput: ', this.state);
     return (
@@ -86,7 +167,7 @@ class ToDoInput extends React.Component {
         <div className="col-12">
           <div className="input-group mb-3">
             <div className="input-group-text">
-              <input className="form-check-input mt-0 toggleAll" type="checkbox" value="" aria-label="Checkbox for following text input" />
+              <input onChange={onToggleAll} className="form-check-input mt-0 toggleAll" type="checkbox" value="" aria-label="Checkbox for following text input" />
             </div>
             <input onChange={this.handleInput} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new todo" />
             <button onClick={onSubmit} className="btn btn-outline-secondary addTo-Do-Button" type="button" id="button-addon2">Add to-do</button>
@@ -108,6 +189,10 @@ class ToDoList extends React.Component {
 
     this.fetchTodos = this.fetchTodos.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleRemove = this.handleRemove.bind(this);
+    this.checkTodoStatus = this.checkTodoStatus.bind(this);
+    this.toggleTodo = this.toggleTodo.bind(this);
+    this.toggleAll = this.toggleAll.bind(this);
   }
 
   componentDidMount() {
@@ -133,6 +218,8 @@ class ToDoList extends React.Component {
     });
   }
 
+
+  /* ========= SUBMIT A NEW TODO =========== */
   // Why does the POST request look so different in Altcademy's version? ->
   // .then(checkStatus)
   //     .then(json)
@@ -141,7 +228,11 @@ class ToDoList extends React.Component {
   //       this.fetchTasks();
   //     })
   handleSubmit() {
-    // console.log(event.target.previousElementSibling.value);
+    // if what was added is not an empty string (trim it first)
+    if(!event.target.previousElementSibling.value.trim()) {
+      return;
+    }
+    
     // send POST request to add a new todo
     fetch('https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=340', {
       method: 'POST',
@@ -167,14 +258,141 @@ class ToDoList extends React.Component {
     }).catch(error => {
       console.log(error);
     });
-
   }
 
-  render() {
 
-    /* How to request todos? 
-     * function that makes request and changes this.state.todos
+  /* ============ REMOVE A TODO ============ */
+  handleRemove() {
+    // The id of the todo item to be removed
+    let todoId = +event.target.closest('ul').getAttribute('dataid');
+    if(!todoId) {
+      return;
+    }
+
+    fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${todoId}?api_key=340`, {
+      method: 'DELETE',
+      mode: 'cors',
+    }).then(response => {
+      if (response.ok) {
+        console.log('response: ', response);
+        return response.json();
+      }
+      throw new Error('Request was either a 404 or 500');
+    }).then(data => {
+      console.log('data inside handleRemove:', data);
+      this.fetchTodos();
+    }).catch(error => {
+      console.log(error);
+    });
+  }
+
+
+  /* ========= CHECK TODO COMPLETION STATUS ========= */
+  checkTodoStatus() {
+    let todoIdToToggle = +event.target.closest('ul').getAttribute('dataid');
+
+    if (!todoIdToToggle) {
+      return;
+    }
+
+    // Check completion status of the todo clicked
+    /* Check completion status of todo inside this.state, not based on the check box. I want to rely on this.state as the 'single source of truth', in case something goes wrong with rendering the completion status before the user clicks toggle.  */
+    this.state.todos.forEach(todo => {
+      if (todo.id === todoIdToToggle) {
+        if (todo.completed === false) {
+          // Warum muss ich hier this. einfügen?
+          this.toggleTodo('mark_complete', todo.id);
+        } else {
+          this.toggleTodo('mark_active', todo.id);
+        }
+      }
+    });
+
+    // V2: Check if checkbox is checked, run toggleTodo based on that
+    // let todoStatus = event.target.checked;
+    // console.log('todoStatus: ', todoStatus);
+    // if (todoStatus === true) {
+    //   this.toggleTodo('mark_complete', todoIdToToggle);
+    // } else if (todoStatus === false) {
+    //   this.toggleTodo('mark_active', todoIdToToggle);
+    // }
+  }
+
+  /* ======= TOGGLE A TODO =========== */
+  toggleTodo(toggleAction, todoId) {
+    console.log('toggleTodo runs. toggleAction: ', toggleAction);
+    /* if todo is active:
+         set it to completed
+       else if todo is completed:
+         set it to active    
     */
+    fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${+todoId}/${toggleAction}?api_key=340`, {
+      method: 'PUT', 
+      mode: 'cors',
+    }).then(response => {
+      if (response.ok) {
+        console.log('response in toggleTodo: ', response);
+        return response.json();
+      }
+
+      throw new Error('Request was either a 404 or 500');
+    }).then(data => {
+      console.log('data inside toggleTodo: ', data);
+      this.fetchTodos();
+    }).catch(error => {
+      console.log(error);
+    });
+  }
+
+
+  /* ========== TOGGLE ALL TODOS ============ */
+  toggleAll() {
+    // If toggle-all checkbox is checked/not checked
+    if (event.target.checked === true) {
+      this.state.todos.forEach(todo => {
+        this.toggleTodo('mark_active', todo.id);
+      });
+    } else if (event.target.checked === false) {
+      let activeTodos = this.state.todos.filter(todo => {
+        return todo.completed === false;
+      });
+
+      activeTodos.forEach(todo => {
+        this.toggleTodo('mark_complete', todo.id);
+      });
+    }
+
+    
+
+    // Uncaught TypeError: Cannot read properties of undefined (reading 'then')
+    // How can I make a fetch request for each item in todos?
+
+    activeTodos.forEach(todo => {
+      fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${todo.id}/mark_complete?api_key=340`, {
+        method: 'PUT', 
+        mode: 'cors',
+      }).then(response => {
+        if (response.ok) {
+          console.log('response in toggleTodo: ', response);
+          return response.json();
+        }
+
+        throw new Error('Request was either a 404 or 500');
+      }).then(data => {
+        console.log('data inside toggleTodo: ', data);
+      }).catch(error => {
+        console.log(error);
+      });
+    });
+
+    console.log('activeTodos after fetch requests: ', activeTodos);
+
+    // Fetch all todos only after all todos have been set to completed
+    this.fetchTodos();
+  }
+
+
+  render() {
     const {todos} = this.state;
     console.log('state in render(): ', this.state);
 
@@ -184,9 +402,9 @@ class ToDoList extends React.Component {
           <div className="col-12">
             <h1 className="text-center">To-Do-List</h1>
     
-            <ToDoInput todos={todos} onSubmit={this.handleSubmit}/>
+            <ToDoInput todos={todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
     
-            <RenderToDos todos={todos}/>
+            <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus}/>
             {/* RenderTo-Dos */}
             {/* <div className="row rendered-to-dos">
               <div className="col-12"> */}
