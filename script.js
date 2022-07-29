@@ -20,14 +20,29 @@ NEXT:
 Remove todo OK
 Toggle a todo OK
 toggle all OK
-Filter todos
-Toggle all todos
+Filter todos OK
 Add loading animation that runs after every fetch request
 When there are no todos, hide todo filters. Show text saying there are no todos.
 Add ability to add todo by hitting Enter key
 After adding todo, input field should be empty again
 if all todos are active: toggle-all checkbox must be set to ''. If all todos are completed, set it to 'checked'
 
+
+FILTER TODOS
+Default value: 
+this.state.filterStatus = 'all'
+---
+Pass filterStatus in to RenderToDos
+FilterTodos component can change state
+---
+If user clicks on all todos button && button is not active:
+  Set this.state.filterStatus to all
+
+Else if user clicks on active todos button && button is not active:
+  Set this.state.filterStatus to active
+
+Else if user clicks on completed todos button && button is not active:
+  Set this.state.filterStatus to completed
 */
 
 /* QUESTIONS
@@ -37,14 +52,19 @@ Removing a todo seems slow - is this my mistake, or is the API?
 function ToDoFilters(props) {
   /* 
   Does filter status go in props or state? In state, because it is change by the user
+  on click: change filter status, show button as active
+  Call handleFilterChange(type of filter) in main componenet, passed into ToDoFilters as props
+  handleFilterChange() changes the state. Based on this state change, page is re-rendered
   */
+  let {changeFilter} = props;
+
   return (
     <div className="row to-do-filters">
       <div className="col-12">
         <div className="filter-buttons d-flex flex-row justify-content-center mt-4">
-          <button type="button" className="btn btn-primary mx-2 active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos button</button>
-          <button type="button" className="btn btn-primary mx-2" data-bs-toggle="button" autoComplete="off">Active to-dos</button>
-          <button type="button" className="btn btn-primary mx-2" data-bs-toggle="button" autoComplete="off">Completed to-dos</button>
+          <button onClick={() => changeFilter('show-all-todos')} type="button" className="btn btn-primary mx-2 filter-button show-all-todos active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos button</button>
+          <button onClick={() => changeFilter('show-active-todos')} type="button" className="btn btn-primary mx-2 filter-button show-active-todos" data-bs-toggle="button" autoComplete="off">Active to-dos</button>
+          <button onClick={() => changeFilter('show-completed-todos')} type="button" className="btn btn-primary mx-2 filter-button show-completed-todos" data-bs-toggle="button" autoComplete="off">Completed to-dos</button>
         </div>
       </div>
     </div>
@@ -52,13 +72,26 @@ function ToDoFilters(props) {
 }
 
 function RenderToDos(props) {
-  const {todos, onRemove, onToggle} = props;
-  console.log('onToggle: ', onToggle);
+  const {todos, onRemove, onToggle, filterStatus} = props;
+  console.log('filterStatus: ', filterStatus);
+  let currentTodos;
+  // render todos based on filterStatus
+  if (filterStatus === 'show-active-todos') {
+    currentTodos = todos.filter(todo => {
+      return todo.completed === false;
+    });
+  } else if (filterStatus === 'show-completed-todos') {
+    currentTodos = todos.filter(todo => {
+      return todo.completed === true;
+    });
+  } else {
+    currentTodos = todos;
+  }
 
   return (
     <div className="row rendered-to-dos">
       <div className="col-12">
-        { todos.map((todo) => {
+        { currentTodos.map((todo) => {
             return (
               <ul className="list-group list-group-horizontal rounded-0 bg-transparent" key={todo.id} dataid={todo.id}>
                 <li
@@ -139,7 +172,7 @@ class ToDoList extends React.Component {
     super(props);
     this.state = {
       todos: [],
-      filterStatus: 'all'
+      filterStatus: 'show-all-todos',
     };
 
     this.fetchTodos = this.fetchTodos.bind(this);
@@ -148,6 +181,7 @@ class ToDoList extends React.Component {
     this.checkTodoStatus = this.checkTodoStatus.bind(this);
     this.toggleTodo = this.toggleTodo.bind(this);
     this.toggleAll = this.toggleAll.bind(this);
+    this.handleFilterChange = this.handleFilterChange.bind(this);
   }
 
   componentDidMount() {
@@ -327,6 +361,29 @@ class ToDoList extends React.Component {
     }
   }
 
+  handleFilterChange(filter) {
+    console.log('filter: ', filter);
+    // set filter to active
+    // show only the fitlered todos
+    // for each filter button:
+      // if filter name === filter:
+        // add class active
+      // else:
+        // remove class active
+    let filterButtons = document.getElementsByClassName('filter-button');
+    for (let i = 0; i < filterButtons.length; i++) {
+      if (filterButtons[i].classList.contains(filter)) {
+        filterButtons[i].classList.add('active');
+      } else {
+        filterButtons[i].classList.remove('active');
+      }
+    }
+
+    this.setState({
+      filterStatus: filter,
+    });
+  }
+
 
   render() {
     const {todos} = this.state;
@@ -340,7 +397,7 @@ class ToDoList extends React.Component {
     
             <ToDoInput todos={this.state.todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
     
-            <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus}/>
+            <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus} filterStatus={this.state.filterStatus}/>
             {/* RenderTo-Dos */}
             {/* <div className="row rendered-to-dos">
               <div className="col-12"> */}
@@ -354,7 +411,7 @@ class ToDoList extends React.Component {
               {/* </div>
             </div> */}
     
-            <ToDoFilters />
+            <ToDoFilters changeFilter={this.handleFilterChange}/>
           </div>
         </div>
       </div>
