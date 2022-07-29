@@ -19,7 +19,7 @@ Otherwise, adding todos appears to work
 NEXT: 
 Remove todo OK
 Toggle a todo OK
-toggle all
+toggle all OK
 Filter todos
 Toggle all todos
 Add loading animation that runs after every fetch request
@@ -27,63 +27,6 @@ When there are no todos, hide todo filters. Show text saying there are no todos.
 Add ability to add todo by hitting Enter key
 After adding todo, input field should be empty again
 if all todos are active: toggle-all checkbox must be set to ''. If all todos are completed, set it to 'checked'
-
---
-
-REMOVE TODO 
-if user clicks remove button:
-  find the id of the todo item that belongs to the button, see URL: https://bobbyhadz.com/blog/react-set-data-attribute
-  send a fetch request to remove that todo item
-  render the todo list again
-
-TOGGLE A SINGLE TODO  
-If user clicks on checkbox:
-  find the id of the todo associated with this checkbox
-  get current state of checkbox:
-    if checkbox is checked:
-      run toggleTodo:
-        send a fetch request, setting todo to active
-    else if checkbox is active:
-      run toggleTodo
-        send a fetch request, setting todo to completed
-    
-  re-render todos
-
-===*** Toggle all does not work yet. Code the strategy below to make it work. ***==================
-TOGGLE ALL TODOS COMPLETED
----
-What is the task of the toggle-all checkbox?
-  - Show when all todos are completed?
-  - If all todos are completed (-> toggle-all checkbox is checked):
-    - Clicking the checkbox sets all to active
-  - If there is at least one active todo (-> toggle-all checkbox is not checked):
-    - Clicking the checkbox sets all to completed (-> toggle-all checkbox is checked now)
-OR
-  - Set all todos to their opposite state? No, makes no sense
-OR: 
-  - If not all todos are completed:
-    - Set all todos to completed
-  - Else if all todos are completed:
-    - Set all todos to active
----
-If user clicks on toggle-all checkbox:
-
-// Instead of resetting the completed property of all todos (and sending unnecessary requests)
-
-re-render all todos
-
-
-TOGGLE ALL TODOS
-If user clicks on toggle-all checkbox:
-  // Or: if all todos are completed
-  If checkbox is checked (ie. all todos are completed):
-    For each todo in todos:
-      Send a feetch request, setting it to active
-    Else if checkbox is not checked (ie. at least one todo is active):
-      Filter active todos
-        For each todo in active todos:
-          Send a fetch request, setting it to completed
-
 
 */
 
@@ -159,7 +102,8 @@ class ToDoInput extends React.Component {
   }
 
   render() {
-    let {onSubmit, onToggleAll} = this.props;
+    let {todos, onSubmit, onToggleAll} = this.props;
+    console.log('todos in ToDoInput: ', todos);
 
     console.log('this.state inside ToDoInput: ', this.state);
     return (
@@ -167,7 +111,18 @@ class ToDoInput extends React.Component {
         <div className="col-12">
           <div className="input-group mb-3">
             <div className="input-group-text">
-              <input onChange={onToggleAll} className="form-check-input mt-0 toggleAll" type="checkbox" value="" aria-label="Checkbox for following text input" />
+              <input 
+              onChange={onToggleAll} 
+              className="form-check-input mt-0 toggleAll"
+              type="checkbox"
+              value="" 
+              aria-label="Checkbox for following text input"
+              checked={
+                todos.every(todo => {
+                  return todo.completed; 
+                }) ? 'checked' : ''
+              } 
+              />
             </div>
             <input onChange={this.handleInput} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new todo" />
             <button onClick={onSubmit} className="btn btn-outline-secondary addTo-Do-Button" type="button" id="button-addon2">Add to-do</button>
@@ -341,54 +296,35 @@ class ToDoList extends React.Component {
       this.fetchTodos();
     }).catch(error => {
       console.log(error);
-    });
+    });  
   }
 
 
   /* ========== TOGGLE ALL TODOS ============ */
   toggleAll() {
-    // If toggle-all checkbox is checked/not checked
-    if (event.target.checked === true) {
-      this.state.todos.forEach(todo => {
+    // If toggle-all checkbox is checked/not checked AFTER USER CLICKS ON IT - DOES NOT REFER TO ITS STATE BEFORE THE CLICK!!!
+    if (event.target.checked === false) {
+      // calling toggleToDo on every todo means that fetchTodos is called every time - is this a problem?
+      // find all completed todos
+        // send a request only for the completed ones
+      let completedTodos = this.state.todos.filter(todo => {
+        return todo.completed === true;
+      });
+
+      completedTodos.forEach(todo => {
         this.toggleTodo('mark_active', todo.id);
       });
-    } else if (event.target.checked === false) {
+    } else if (event.target.checked === true) {
       let activeTodos = this.state.todos.filter(todo => {
         return todo.completed === false;
       });
+
+      console.log('activeTodos: ', activeTodos);
 
       activeTodos.forEach(todo => {
         this.toggleTodo('mark_complete', todo.id);
       });
     }
-
-    
-
-    // Uncaught TypeError: Cannot read properties of undefined (reading 'then')
-    // How can I make a fetch request for each item in todos?
-
-    activeTodos.forEach(todo => {
-      fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${todo.id}/mark_complete?api_key=340`, {
-        method: 'PUT', 
-        mode: 'cors',
-      }).then(response => {
-        if (response.ok) {
-          console.log('response in toggleTodo: ', response);
-          return response.json();
-        }
-
-        throw new Error('Request was either a 404 or 500');
-      }).then(data => {
-        console.log('data inside toggleTodo: ', data);
-      }).catch(error => {
-        console.log(error);
-      });
-    });
-
-    console.log('activeTodos after fetch requests: ', activeTodos);
-
-    // Fetch all todos only after all todos have been set to completed
-    this.fetchTodos();
   }
 
 
@@ -402,7 +338,7 @@ class ToDoList extends React.Component {
           <div className="col-12">
             <h1 className="text-center">To-Do-List</h1>
     
-            <ToDoInput todos={todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
+            <ToDoInput todos={this.state.todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
     
             <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus}/>
             {/* RenderTo-Dos */}
