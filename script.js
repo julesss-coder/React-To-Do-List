@@ -12,60 +12,65 @@ Davids Code durchlesen und kommentieren, was ich nicht verstehe, recherchieren
 */
 
 /* 
-TODOS
-Only add a todo if input field is not empty OK
-Otherwise, adding todos appears to work
-
-NEXT: 
 Remove todo OK
 Toggle a todo OK
 toggle all OK
 Filter todos OK
-Add loading animation that runs after every fetch request
-When there are no todos, hide todo filters. Show text saying there are no todos.
+Add loading animation that runs after every fetch request OK
+
+if all todos are active: toggle-all checkbox must be set to ''. OK
+If all todos are completed, set it to 'checked'. OK
+
+When there are no todos: 
+ - hide todo filters. Show text saying there are no todos. OK
+ - uncheck toggle-all checkbox. OK
+
+After adding todo, input field should be empty again OK
+
 Add ability to add todo by hitting Enter key
-After adding todo, input field should be empty again
-if all todos are active: toggle-all checkbox must be set to ''. If all todos are completed, set it to 'checked'
 
-
-FILTER TODOS
-Default value: 
-this.state.filterStatus = 'all'
----
-Pass filterStatus in to RenderToDos
-FilterTodos component can change state
----
-If user clicks on all todos button && button is not active:
-  Set this.state.filterStatus to all
-
-Else if user clicks on active todos button && button is not active:
-  Set this.state.filterStatus to active
-
-Else if user clicks on completed todos button && button is not active:
-  Set this.state.filterStatus to completed
 */
 
 /* QUESTIONS
 Removing a todo seems slow - is this my mistake, or is the API?
+
+Is the loader implemented correctly? It seems redundant to set this.state.loading to true before each fetch request, then resetting it to false once the request is finished. Is there a better way?
+
+Why does the POST request when submitting a new todo look so different in Altcademy's version? ->
+.then(checkStatus)
+    .then(json)
+    .then((data) => {
+      this.setState({new_task: ''});
+      this.fetchTasks();
+    })
+
+In toggleAll(): calling toggleToDo on every todo means that fetchTodos is called every time - is this a problem?
 */
 
+function Loader(props) {
+  return (
+    <div className="d-flex justify-content-center m-5 p-5">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  )
+}
+
 function ToDoFilters(props) {
-  /* 
-  Does filter status go in props or state? In state, because it is change by the user
-  on click: change filter status, show button as active
-  Call handleFilterChange(type of filter) in main componenet, passed into ToDoFilters as props
-  handleFilterChange() changes the state. Based on this state change, page is re-rendered
-  */
-  let {changeFilter} = props;
+  let {changeFilter, todosLength} = props;
 
   return (
     <div className="row to-do-filters">
       <div className="col-12">
-        <div className="filter-buttons d-flex flex-row justify-content-center mt-4">
-          <button onClick={() => changeFilter('show-all-todos')} type="button" className="btn btn-primary mx-2 filter-button show-all-todos active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos button</button>
-          <button onClick={() => changeFilter('show-active-todos')} type="button" className="btn btn-primary mx-2 filter-button show-active-todos" data-bs-toggle="button" autoComplete="off">Active to-dos</button>
-          <button onClick={() => changeFilter('show-completed-todos')} type="button" className="btn btn-primary mx-2 filter-button show-completed-todos" data-bs-toggle="button" autoComplete="off">Completed to-dos</button>
-        </div>
+        { todosLength === 0 
+          ? 'There are no to-dos.'
+          : <div className="filter-buttons d-flex flex-row justify-content-center mt-4">
+            <button onClick={() => changeFilter('show-all-todos')} type="button" className="btn btn-primary mx-2 filter-button show-all-todos active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos button</button>
+            <button onClick={() => changeFilter('show-active-todos')} type="button" className="btn btn-primary mx-2 filter-button show-active-todos" data-bs-toggle="button" autoComplete="off">Active to-dos</button>
+            <button onClick={() => changeFilter('show-completed-todos')} type="button" className="btn btn-primary mx-2 filter-button show-completed-todos" data-bs-toggle="button" autoComplete="off">Completed to-dos</button>
+          </div>
+        }
       </div>
     </div>
   )
@@ -73,8 +78,8 @@ function ToDoFilters(props) {
 
 function RenderToDos(props) {
   const {todos, onRemove, onToggle, filterStatus} = props;
-  console.log('filterStatus: ', filterStatus);
   let currentTodos;
+
   // render todos based on filterStatus
   if (filterStatus === 'show-active-todos') {
     currentTodos = todos.filter(todo => {
@@ -136,9 +141,7 @@ class ToDoInput extends React.Component {
 
   render() {
     let {todos, onSubmit, onToggleAll} = this.props;
-    console.log('todos in ToDoInput: ', todos);
 
-    console.log('this.state inside ToDoInput: ', this.state);
     return (
       <div className="row to-do-input">
         <div className="col-12">
@@ -150,14 +153,27 @@ class ToDoInput extends React.Component {
               type="checkbox"
               value="" 
               aria-label="Checkbox for following text input"
+              /* If there are todos:
+                   If all todos are completed:
+                     Toggle-all checkbox is checked
+                   Else:
+                     Toggle-all checkbox is not checked
+                 Else if there are no todos:
+                   Toggle-all checkbox is not checked
+              */
               checked={
-                todos.every(todo => {
-                  return todo.completed; 
-                }) ? 'checked' : ''
+                todos.length > 0
+                ?             
+                  todos.every(todo => {
+                    return todo.completed; 
+                  }) 
+                  ? 'checked' 
+                  : ''
+                : ''
               } 
               />
             </div>
-            <input onChange={this.handleInput} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new todo" />
+            <input onChange={this.handleInput} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new to-do" />
             <button onClick={onSubmit} className="btn btn-outline-secondary addTo-Do-Button" type="button" id="button-addon2">Add to-do</button>
           </div>
         </div>
@@ -166,13 +182,13 @@ class ToDoInput extends React.Component {
   }
 }
 
-// Needs to make fetch request to get todos from API
 class ToDoList extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       todos: [],
       filterStatus: 'show-all-todos',
+      loading: false,
     };
 
     this.fetchTodos = this.fetchTodos.bind(this);
@@ -189,7 +205,12 @@ class ToDoList extends React.Component {
   }
   
   fetchTodos() {
-    console.log('state in fetchTodos:', this.state);
+    if (this.state.loading === false) {
+      this.setState({
+        loading: true,
+      });
+    }
+
     fetch('https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=340').then(response => {
       if (response.ok) {
         console.log('response: ', response);
@@ -198,9 +219,9 @@ class ToDoList extends React.Component {
       throw new Error('Request was either a 404 or 500');
     }).then(data => {
       console.log('json data: ', data.tasks);
-      // I only want to change one property in state - how do I do that?
       this.setState({
         todos: data.tasks,
+        loading: false,
       });
     }).catch(error => {
       console.log(error);
@@ -209,20 +230,16 @@ class ToDoList extends React.Component {
 
 
   /* ========= SUBMIT A NEW TODO =========== */
-  // Why does the POST request look so different in Altcademy's version? ->
-  // .then(checkStatus)
-  //     .then(json)
-  //     .then((data) => {
-  //       this.setState({new_task: ''});
-  //       this.fetchTasks();
-  //     })
   handleSubmit() {
-    // if what was added is not an empty string (trim it first)
+    // If input field was empty when user submitted:
     if(!event.target.previousElementSibling.value.trim()) {
       return;
     }
+
+    this.setState({
+      loading: true,
+    });
     
-    // send POST request to add a new todo
     fetch('https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=340', {
       method: 'POST',
       mode: 'cors', 
@@ -257,6 +274,10 @@ class ToDoList extends React.Component {
     if(!todoId) {
       return;
     }
+
+    this.setState({
+      loading: true,
+    });
 
     fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${todoId}?api_key=340`, {
       method: 'DELETE',
@@ -309,12 +330,10 @@ class ToDoList extends React.Component {
 
   /* ======= TOGGLE A TODO =========== */
   toggleTodo(toggleAction, todoId) {
-    console.log('toggleTodo runs. toggleAction: ', toggleAction);
-    /* if todo is active:
-         set it to completed
-       else if todo is completed:
-         set it to active    
-    */
+    this.setState({
+      loading: true,
+    });
+
     fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${+todoId}/${toggleAction}?api_key=340`, {
       method: 'PUT', 
       mode: 'cors',
@@ -337,10 +356,7 @@ class ToDoList extends React.Component {
   /* ========== TOGGLE ALL TODOS ============ */
   toggleAll() {
     // If toggle-all checkbox is checked/not checked AFTER USER CLICKS ON IT - DOES NOT REFER TO ITS STATE BEFORE THE CLICK!!!
-    if (event.target.checked === false) {
-      // calling toggleToDo on every todo means that fetchTodos is called every time - is this a problem?
-      // find all completed todos
-        // send a request only for the completed ones
+    if (event.target.checked === false) {      
       let completedTodos = this.state.todos.filter(todo => {
         return todo.completed === true;
       });
@@ -353,8 +369,6 @@ class ToDoList extends React.Component {
         return todo.completed === false;
       });
 
-      console.log('activeTodos: ', activeTodos);
-
       activeTodos.forEach(todo => {
         this.toggleTodo('mark_complete', todo.id);
       });
@@ -362,14 +376,6 @@ class ToDoList extends React.Component {
   }
 
   handleFilterChange(filter) {
-    console.log('filter: ', filter);
-    // set filter to active
-    // show only the fitlered todos
-    // for each filter button:
-      // if filter name === filter:
-        // add class active
-      // else:
-        // remove class active
     let filterButtons = document.getElementsByClassName('filter-button');
     for (let i = 0; i < filterButtons.length; i++) {
       if (filterButtons[i].classList.contains(filter)) {
@@ -386,14 +392,15 @@ class ToDoList extends React.Component {
 
 
   render() {
+    if (this.state.loading === true) return <Loader />
+
     const {todos} = this.state;
-    console.log('state in render(): ', this.state);
 
     return (
       <div className="container">
         <div className="row to-do-list">
           <div className="col-12">
-            <h1 className="text-center">To-Do-List</h1>
+            <h1 className="text-center my-5">To-Do-List</h1>
     
             <ToDoInput todos={this.state.todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
     
@@ -411,26 +418,13 @@ class ToDoList extends React.Component {
               {/* </div>
             </div> */}
     
-            <ToDoFilters changeFilter={this.handleFilterChange}/>
+            <ToDoFilters changeFilter={this.handleFilterChange} todosLength={this.state.todos.length}/>
           </div>
         </div>
       </div>
     );
   }
 }
-
-	
-// const tasks = [
-//   { id: 1,
-//     content: 'Buy groceries for next week',
-//     completed: false,
-//   },
-//   { id: 2,
-//     content: 'Breathing exercises',
-//     completed: true,
-//   },
-// ];
-
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
