@@ -29,6 +29,8 @@ After adding todo, input field should be empty again OK
 
 Add ability to add todo by hitting Enter key
 
+Add ability to edit todo
+
 */
 
 /* QUESTIONS
