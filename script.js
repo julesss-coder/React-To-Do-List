@@ -27,9 +27,14 @@ When there are no todos:
 
 After adding todo, input field should be empty again OK
 
-Add ability to add todo by hitting Enter key
+Replace event with React synthetic event 'e', and pass it to every function that is passed in as props (using arrow function)
 
-Add ability to edit todo
+Add ability to add todo by hitting Enter key OK
+  If user hits Enter while focus is on input field
+    Do the same as when user hits AddTodo
+
+Add ability to edit todo OK
+Handle click outside edit-input field while editing - focusout event OK
 
 */
 
@@ -79,7 +84,7 @@ function ToDoFilters(props) {
 }
 
 function RenderToDos(props) {
-  const {todos, onRemove, onToggle, filterStatus} = props;
+  const {todos, onRemove, onToggle, onEdit, onEditSubmit, onBlur, filterStatus} = props;
   let currentTodos;
 
   // render todos based on filterStatus
@@ -109,9 +114,9 @@ function RenderToDos(props) {
                   </div>
                 </li>
                 <li className="list-group-item px-3 py-1 d-flex align-items-center flex-grow-1 border-0 bg-transparent">
-                  <p className="lead fw-normal mb-0">{todo.content}</p>
+                  <p onDoubleClick={onEdit} className="lead fw-normal mb-0">{todo.content}</p>
                   {/* When editing to-do item, replace above p element with the following input element: */}
-                  {/* <input className="me-0" type="text" /> */}
+                  <input onKeyUp={onEditSubmit} onBlur={onBlur} className="me-0 edit-input editing" type="text" defaultValue={todo.content} />
                 </li>
                 <li className="list-group-item ps-3 pe-0 py-1 rounded-0 border-0 bg-transparent">
                   <button onClick={onRemove} className="btn btn-danger" >Remove</button>
@@ -142,7 +147,7 @@ class ToDoInput extends React.Component {
   }
 
   render() {
-    let {todos, onSubmit, onToggleAll} = this.props;
+    let {todos, onSubmit, onToggleAll, onEnterKey} = this.props;
 
     return (
       <div className="row to-do-input">
@@ -175,7 +180,7 @@ class ToDoInput extends React.Component {
               } 
               />
             </div>
-            <input onChange={this.handleInput} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new to-do" />
+            <input onChange={this.handleInput} onKeyUp={onEnterKey} type="text" className="form-control" aria-label="Text input with checkbox" placeholder="Your new to-do" />
             <button onClick={onSubmit} className="btn btn-outline-secondary addTo-Do-Button" type="button" id="button-addon2">Add to-do</button>
           </div>
         </div>
@@ -194,11 +199,15 @@ class ToDoList extends React.Component {
     };
 
     this.fetchTodos = this.fetchTodos.bind(this);
+    this.addToDo = this.addToDo.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleRemove = this.handleRemove.bind(this);
     this.checkTodoStatus = this.checkTodoStatus.bind(this);
     this.toggleTodo = this.toggleTodo.bind(this);
     this.toggleAll = this.toggleAll.bind(this);
+    this.handleEdit = this.handleEdit.bind(this);
+    this.handleEditSubmit = this.handleEditSubmit.bind(this);
+    this.handleOutsideClick = this.handleOutsideClick.bind(this);
     this.handleFilterChange = this.handleFilterChange.bind(this);
   }
 
@@ -231,13 +240,8 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ========= SUBMIT A NEW TODO =========== */
-  handleSubmit() {
-    // If input field was empty when user submitted:
-    if(!event.target.previousElementSibling.value.trim()) {
-      return;
-    }
-
+  /* ========= ADD A NEW TODO =========== */
+  addToDo(toDo) {
     this.setState({
       loading: true,
     });
@@ -250,7 +254,7 @@ class ToDoList extends React.Component {
       },
       body: JSON.stringify({
         task: {
-          content: event.target.previousElementSibling.value,
+          content: toDo,
         }
       }),
     }).then(response => {
@@ -266,6 +270,29 @@ class ToDoList extends React.Component {
     }).catch(error => {
       console.log(error);
     });
+  }
+
+  
+  /* ========= HANDLE TODO SUBMIT BY ENTER KEY/BUTTON CLICK ======== */
+  handleSubmit(e) {
+    // if user hit Enter key
+    if (e.target.nodeName === 'INPUT' && e.key === "Enter") {
+      if (!e.target.value.trim()) {
+        return; // was passiert dann?
+      }
+
+      let todo = e.target.value.trim();
+      this.addToDo(todo);
+
+    // if user clicked on 'add-todo' button  
+    } else if (e.target.nodeName === 'BUTTON' && e.type === 'click') {
+      if (!e.target.previousElementSibling.value.trim()) {
+        return;
+      }
+
+      let todo = e.target.previousElementSibling.value.trim();
+      this.addToDo(todo);
+    }
   }
 
 
@@ -312,7 +339,6 @@ class ToDoList extends React.Component {
     this.state.todos.forEach(todo => {
       if (todo.id === todoIdToToggle) {
         if (todo.completed === false) {
-          // Warum muss ich hier this. einfügen?
           this.toggleTodo('mark_complete', todo.id);
         } else {
           this.toggleTodo('mark_active', todo.id);
@@ -377,6 +403,79 @@ class ToDoList extends React.Component {
     }
   }
 
+
+  /* ============ EDIT A TODO ============ */
+  handleEdit(e) {
+    // I am using the React event `e` this time, instead of JS event `event`
+    let iDToEdit = e.target.closest('ul').getAttribute('dataid');
+    // Hide todo item
+    e.target.classList.add('editing');
+    // Display editing field instead of todo
+    let editInputField = e.target.nextElementSibling;
+    editInputField.classList.remove('editing');
+    editInputField.value = e.target.textContent;
+    // Put focus on input field 
+    editInputField.focus();
+  }
+
+  /* =========== HANDLE EDITED TODO SUBMISSION ======== */
+  // should be renamed: handleEditDecision
+  handleEditSubmit(e) {
+    if (!e.target.value.trim()) {
+      return;
+    }
+
+    let iDToEdit = +e.target.closest('ul').getAttribute('dataid');
+    let editedToDo = e.target.value.trim();
+
+    if (e.key === "Enter") {
+      fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${iDToEdit}?api_key=340`, {
+        method: 'PUT',
+        mode: 'cors', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          task: {
+            content: editedToDo,
+          }
+        }),
+      }).then(response => {
+        if (response.ok) {
+          console.log('response: ', response);
+          return response.json();
+        }
+        throw new Error('Request was either a 404 or 500');
+      }).then(data => {
+        console.log('data inside PUT request', data);
+        // call fetchTodos() - here or outside this fetch request? Works both ways.
+        this.fetchTodos();
+      }).catch(error => {
+        console.log(error);
+        // Hiding input and displaying todo is not necessary after a successful fetch request. However, it IS necessary after an error is thrown, as in that case, fetchTodos is not called, so the DOM is not rerendered. -> Input field stays visible, the p element of the todo item is not.
+        // Hide input field
+        e.target.classList.add('editing');
+        // Display todo item
+        e.target.previousElementSibling.classList.remove('editing');
+      });
+    } else if (e.key === "Escape") {
+      // Hide input field
+      e.target.classList.add('editing');
+      // Display todo item
+      e.target.previousElementSibling.classList.remove('editing');
+    }
+  }
+
+  /* ======== HANDLE CLICK OUTSIDE EDIT INPUT FIELD WHEN EDITING ===== */
+
+  handleOutsideClick(e) {
+    // Hide edit-input field
+    e.target.classList.add('editing');
+    // Display todo item
+    e.target.previousElementSibling.classList.remove('editing');
+  }
+
+
   handleFilterChange(filter) {
     let filterButtons = document.getElementsByClassName('filter-button');
     for (let i = 0; i < filterButtons.length; i++) {
@@ -404,9 +503,9 @@ class ToDoList extends React.Component {
           <div className="col-12">
             <h1 className="text-center my-5">To-Do-List</h1>
     
-            <ToDoInput todos={this.state.todos} onSubmit={this.handleSubmit} onToggleAll={this.toggleAll}/>
+            <ToDoInput todos={this.state.todos} onSubmit={(e) => this.handleSubmit(e)} onEnterKey={(e) => this.handleSubmit(e)} onToggleAll={this.toggleAll}/>
     
-            <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus} filterStatus={this.state.filterStatus}/>
+            <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus} onEdit={(e) => this.handleEdit(e)} onEditSubmit={(e) => this.handleEditSubmit(e)} onBlur={(e) => this.handleOutsideClick(e)} filterStatus={this.state.filterStatus}/>
             {/* RenderTo-Dos */}
             {/* <div className="row rendered-to-dos">
               <div className="col-12"> */}

@@ -17,3 +17,9 @@
   width: 60px;
   height: 60px;
 }
+
+
+.editing {
+  display: none;
+}
+
