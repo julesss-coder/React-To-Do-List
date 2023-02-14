@@ -1,5 +1,7 @@
 /* 
-MY API KEY: 340 */
+New API as of September 2022: https://fewd-todolist-api.onrender.com/
+New id: {success:true,id:111}
+*/
 
 /* 
 Über
@@ -73,7 +75,7 @@ function ToDoFilters(props) {
         { todosLength === 0 
           ? 'There are no to-dos.'
           : <div className="filter-buttons d-flex flex-row justify-content-center mt-4">
-            <button onClick={() => changeFilter('show-all-todos')} type="button" className="btn btn-primary mx-2 filter-button show-all-todos active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos button</button>
+            <button onClick={() => changeFilter('show-all-todos')} type="button" className="btn btn-primary mx-2 filter-button show-all-todos active" data-bs-toggle="button" autoComplete="off" aria-pressed="true">All to-dos</button>
             <button onClick={() => changeFilter('show-active-todos')} type="button" className="btn btn-primary mx-2 filter-button show-active-todos" data-bs-toggle="button" autoComplete="off">Active to-dos</button>
             <button onClick={() => changeFilter('show-completed-todos')} type="button" className="btn btn-primary mx-2 filter-button show-completed-todos" data-bs-toggle="button" autoComplete="off">Completed to-dos</button>
           </div>
@@ -222,14 +224,12 @@ class ToDoList extends React.Component {
       });
     }
 
-    fetch('https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=340').then(response => {
+    fetch('https://fewd-todolist-api.onrender.com/tasks?api_key=111').then(response => {
       if (response.ok) {
-        console.log('response: ', response);
         return response.json();
       }
       throw new Error('Request was either a 404 or 500');
     }).then(data => {
-      console.log('json data: ', data.tasks);
       this.setState({
         todos: data.tasks,
         loading: false,
@@ -246,7 +246,7 @@ class ToDoList extends React.Component {
       loading: true,
     });
     
-    fetch('https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=340', {
+    fetch('https://fewd-todolist-api.onrender.com/tasks?api_key=111', {
       method: 'POST',
       mode: 'cors', 
       headers: {
@@ -259,13 +259,10 @@ class ToDoList extends React.Component {
       }),
     }).then(response => {
       if (response.ok) {
-        console.log('response: ', response);
         return response.json();
       }
       throw new Error('Request was either a 404 or 500');
     }).then(data => {
-      console.log('data inside POST request', data);
-      // call fetchTodos() - here or outside this fetch request? Works both ways.
       this.fetchTodos();
     }).catch(error => {
       console.log(error);
@@ -308,17 +305,15 @@ class ToDoList extends React.Component {
       loading: true,
     });
 
-    fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${todoId}?api_key=340`, {
+    fetch(`https://fewd-todolist-api.onrender.com/tasks/${todoId}?api_key=111`, {
       method: 'DELETE',
       mode: 'cors',
     }).then(response => {
       if (response.ok) {
-        console.log('response: ', response);
         return response.json();
       }
       throw new Error('Request was either a 404 or 500');
     }).then(data => {
-      console.log('data inside handleRemove:', data);
       this.fetchTodos();
     }).catch(error => {
       console.log(error);
@@ -362,18 +357,16 @@ class ToDoList extends React.Component {
       loading: true,
     });
 
-    fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${+todoId}/${toggleAction}?api_key=340`, {
+    fetch(`https://fewd-todolist-api.onrender.com/tasks/${+todoId}/${toggleAction}?api_key=111`, {
       method: 'PUT', 
       mode: 'cors',
     }).then(response => {
       if (response.ok) {
-        console.log('response in toggleTodo: ', response);
         return response.json();
       }
 
       throw new Error('Request was either a 404 or 500');
     }).then(data => {
-      console.log('data inside toggleTodo: ', data);
       this.fetchTodos();
     }).catch(error => {
       console.log(error);
@@ -429,7 +422,7 @@ class ToDoList extends React.Component {
     let editedToDo = e.target.value.trim();
 
     if (e.key === "Enter") {
-      fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${iDToEdit}?api_key=340`, {
+      fetch(`https://altcademy-to-do-list-api.herokuapp.com/tasks/${iDToEdit}?api_key=111`, {
         method: 'PUT',
         mode: 'cors', 
         headers: {
@@ -442,13 +435,10 @@ class ToDoList extends React.Component {
         }),
       }).then(response => {
         if (response.ok) {
-          console.log('response: ', response);
           return response.json();
         }
         throw new Error('Request was either a 404 or 500');
       }).then(data => {
-        console.log('data inside PUT request', data);
-        // call fetchTodos() - here or outside this fetch request? Works both ways.
         this.fetchTodos();
       }).catch(error => {
         console.log(error);
