@@ -3,59 +3,6 @@ New API as of September 2022: https://fewd-todolist-api.onrender.com/
 New id: {success:true,id:111}
 */
 
-/* 
-Über
-fetch requests
-promises
-classes (und this in classes)
-lesen
-
-Davids Code durchlesen und kommentieren, was ich nicht verstehe, recherchieren
-*/
-
-/* 
-Remove todo OK
-Toggle a todo OK
-toggle all OK
-Filter todos OK
-Add loading animation that runs after every fetch request OK
-
-if all todos are active: toggle-all checkbox must be set to ''. OK
-If all todos are completed, set it to 'checked'. OK
-
-When there are no todos: 
- - hide todo filters. Show text saying there are no todos. OK
- - uncheck toggle-all checkbox. OK
-
-After adding todo, input field should be empty again OK
-
-Replace event with React synthetic event 'e', and pass it to every function that is passed in as props (using arrow function)
-
-Add ability to add todo by hitting Enter key OK
-  If user hits Enter while focus is on input field
-    Do the same as when user hits AddTodo
-
-Add ability to edit todo OK
-Handle click outside edit-input field while editing - focusout event OK
-
-*/
-
-/* QUESTIONS
-Removing a todo seems slow - is this my mistake, or is the API?
-
-Is the loader implemented correctly? It seems redundant to set this.state.loading to true before each fetch request, then resetting it to false once the request is finished. Is there a better way?
-
-Why does the POST request when submitting a new todo look so different in Altcademy's version? ->
-.then(checkStatus)
-    .then(json)
-    .then((data) => {
-      this.setState({new_task: ''});
-      this.fetchTasks();
-    })
-
-In toggleAll(): calling toggleToDo on every todo means that fetchTodos is called every time - is this a problem?
-*/
-
 function Loader(props) {
   return (
     <div className="d-flex justify-content-center m-5 p-5">
@@ -240,7 +187,6 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ========= ADD A NEW TODO =========== */
   addToDo(toDo) {
     this.setState({
       loading: true,
@@ -270,18 +216,15 @@ class ToDoList extends React.Component {
   }
 
   
-  /* ========= HANDLE TODO SUBMIT BY ENTER KEY/BUTTON CLICK ======== */
   handleSubmit(e) {
-    // if user hit Enter key
     if (e.target.nodeName === 'INPUT' && e.key === "Enter") {
       if (!e.target.value.trim()) {
-        return; // was passiert dann?
+        return;
       }
 
       let todo = e.target.value.trim();
       this.addToDo(todo);
 
-    // if user clicked on 'add-todo' button  
     } else if (e.target.nodeName === 'BUTTON' && e.type === 'click') {
       if (!e.target.previousElementSibling.value.trim()) {
         return;
@@ -293,9 +236,7 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ============ REMOVE A TODO ============ */
   handleRemove() {
-    // The id of the todo item to be removed
     let todoId = +event.target.closest('ul').getAttribute('dataid');
     if(!todoId) {
       return;
@@ -321,7 +262,6 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ========= CHECK TODO COMPLETION STATUS ========= */
   checkTodoStatus() {
     let todoIdToToggle = +event.target.closest('ul').getAttribute('dataid');
 
@@ -340,18 +280,8 @@ class ToDoList extends React.Component {
         }
       }
     });
-
-    // V2: Check if checkbox is checked, run toggleTodo based on that
-    // let todoStatus = event.target.checked;
-    // console.log('todoStatus: ', todoStatus);
-    // if (todoStatus === true) {
-    //   this.toggleTodo('mark_complete', todoIdToToggle);
-    // } else if (todoStatus === false) {
-    //   this.toggleTodo('mark_active', todoIdToToggle);
-    // }
   }
 
-  /* ======= TOGGLE A TODO =========== */
   toggleTodo(toggleAction, todoId) {
     this.setState({
       loading: true,
@@ -374,7 +304,6 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ========== TOGGLE ALL TODOS ============ */
   toggleAll() {
     // If toggle-all checkbox is checked/not checked AFTER USER CLICKS ON IT - DOES NOT REFER TO ITS STATE BEFORE THE CLICK!!!
     if (event.target.checked === false) {      
@@ -397,7 +326,6 @@ class ToDoList extends React.Component {
   }
 
 
-  /* ============ EDIT A TODO ============ */
   handleEdit(e) {
     // I am using the React event `e` this time, instead of JS event `event`
     let iDToEdit = e.target.closest('ul').getAttribute('dataid');
@@ -407,12 +335,9 @@ class ToDoList extends React.Component {
     let editInputField = e.target.nextElementSibling;
     editInputField.classList.remove('editing');
     editInputField.value = e.target.textContent;
-    // Put focus on input field 
     editInputField.focus();
   }
 
-  /* =========== HANDLE EDITED TODO SUBMISSION ======== */
-  // should be renamed: handleEditDecision
   handleEditSubmit(e) {
     if (!e.target.value.trim()) {
       return;
@@ -496,18 +421,6 @@ class ToDoList extends React.Component {
             <ToDoInput todos={this.state.todos} onSubmit={(e) => this.handleSubmit(e)} onEnterKey={(e) => this.handleSubmit(e)} onToggleAll={this.toggleAll}/>
     
             <RenderToDos todos={todos} onRemove={this.handleRemove} onToggle={this.checkTodoStatus} onEdit={(e) => this.handleEdit(e)} onEditSubmit={(e) => this.handleEditSubmit(e)} onBlur={(e) => this.handleOutsideClick(e)} filterStatus={this.state.filterStatus}/>
-            {/* RenderTo-Dos */}
-            {/* <div className="row rendered-to-dos">
-              <div className="col-12"> */}
-                {/* className="list-group: Checkbox, to-do and button not aligned. Cannot access todo separately.  */}
-                {/* To-do List as Table - works, but button is not center aligned. Try with flexbox.*/}
-                {/* Another approach:  URL: https://mdbootstrap.com/docs/standard/extended/to-do-list/,*/}
-                {/* I don't have to layout everything with rol and col, using flexbox on individual divs sometimes works better */}
-                {/* Each to-do item is a ul element!!! */}
-    
-                {/* SingleTo-Do goes here*/}
-              {/* </div>
-            </div> */}
     
             <ToDoFilters changeFilter={this.handleFilterChange} todosLength={this.state.todos.length}/>
           </div>
